@@ -1,1 +1,34 @@
-This is a simple test that reproduces what I believe is a bug in Tomcat 7.0.x's Servlet 3.0 asynchronous support.  response.sendRedirect and response.sendError don't seem to work when using an AsyncContext.  Or I've missing something and I'm doing something dumb...
+This is a simple test that reproduces what I believe is a bug in Tomcat 7.0.x's Servlet 3.0 asynchronous support.  response.sendRedirect and response.sendError don't seem to work when using an AsyncContext.  Or I've missing something and I'm doing something dumb!
+
+I've tested this on 7.0.12, and it fails reliably.
+
+For some reason, response.sendRedirect and response.sendError are not producing expected behavior.  The async request completes normally, and everything looks hunky dory, but the client never gets ANY response from the server.  It appears that Tomcat simply times out after the default 10 seconds and closes the connection.  No headers are returned, no content, nothing.
+
+Yet...if you use response.setStatus and response.setHeader instead, it works absolutely fine!
+
+To reproduce the bug:
+
+mvn package
+cp target/async-test-1.0.war $TOMCAT_HOME/webapps
+<start tomcat>
+
+# Test that the servlet is working in general
+curl -v 'http://localhost:8080/async-test-1.0/test/foo/bar'
+
+# Test response.sendRedirect
+curl -v 'http://localhost:8080/async-test-1.0/test/redirect1'
+...times out without sending any response
+
+# Test response.setStatus(SC_FOUND) and response.setHeader(Location)
+curl -v 'http://localhost:8080/async-test-1.0/test/redirect2'
+...works fine!
+
+# Test response.sendError(SC_BAD_REQUEST)
+curl -v 'http://localhost:8080/async-test-1.0/test/error1'
+...times out without sending any response
+
+# Test response.setStatus(SC_BAD_REQUEST) and response.getWriter().append(...).flush();
+curl -v 'http://localhost:8080/async-test-1.0/test/error2'
+...works fine!
+
+You can simply change "/test/" to "/test2/" to use the the servlet that manages its own thread pool.  The behavior is identical either way.
