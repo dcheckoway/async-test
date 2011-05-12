@@ -32,3 +32,9 @@ curl -v 'http://localhost:8080/async-test-1.0/test/error2'
 ...works fine!
 
 You can simply change "/test/" to "/test2/" to use the the servlet that manages its own thread pool.  The behavior is identical either way.
+
+For what it's worth, I'm using stock Tomcat 7.0.12 config with NIO configured on the 8080 connector:
+
+    <Connector port="8080" protocol="org.apache.coyote.http11.Http11NioProtocol" 
+               connectionTimeout="20000" 
+               redirectPort="8443" />
