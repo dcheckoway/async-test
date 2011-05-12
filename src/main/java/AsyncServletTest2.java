@@ -43,7 +43,7 @@ public class AsyncServletTest2 extends HttpServlet {
     
     @Override
     protected void service(final HttpServletRequest request, final HttpServletResponse response) throws java.io.IOException {
-        final AsyncContext asyncContext = request.startAsync(request, response);
+        final AsyncContext ctx = request.startAsync(request, response);
 
         final FutureTask futureTask = new FutureTask(new Runnable() {
                 @Override
@@ -52,37 +52,37 @@ public class AsyncServletTest2 extends HttpServlet {
                         logger.info("Handling request for " + request.getRequestURI() + " in async mode");
                         if (request.getRequestURI().endsWith("/redirect1")) {
                             logger.info("Redirecting using sendRedirect");
-                            response.sendRedirect("http://tomcat.apache.org");
+                            ((HttpServletResponse)ctx.getResponse()).sendRedirect("http://tomcat.apache.org");
                         } else if (request.getRequestURI().endsWith("/redirect2")) {
                             logger.info("Redirecting using setStatus and setHeader");
-                            response.setStatus(HttpServletResponse.SC_FOUND);
-                            response.setHeader("Location", "http://tomcat.apache.org");
+                            ((HttpServletResponse)ctx.getResponse()).setStatus(HttpServletResponse.SC_FOUND);
+                            ((HttpServletResponse)ctx.getResponse()).setHeader("Location", "http://tomcat.apache.org");
                         } else if (request.getRequestURI().endsWith("/error1")) {
                             logger.info("Sending error response using sendError");
-                            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry, that was a bad request.");
+                            ((HttpServletResponse)ctx.getResponse()).sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry, that was a bad request.");
                         } else if (request.getRequestURI().endsWith("/error2")) {
                             logger.info("Sending error response using setStatus");
-                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                            response.getWriter().append("Sorry, that was a bad request.\n").flush();
+                            ((HttpServletResponse)ctx.getResponse()).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                            ((HttpServletResponse)ctx.getResponse()).getWriter().append("Sorry, that was a bad request.\n").flush();
                         } else {
                             logger.info("Sending a response");
-                            response.getWriter().append("You requested: " + request.getRequestURI() + "\n").flush();
+                            ((HttpServletResponse)ctx.getResponse()).getWriter().append("You requested: " + request.getRequestURI() + "\n").flush();
                         }
                     } catch (Exception e) {
                         logger.log(Level.SEVERE, "Async task failed", e);
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        ((HttpServletResponse)ctx.getResponse()).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                         try {
-                            response.getWriter().flush();
+                            ((HttpServletResponse)ctx.getResponse()).getWriter().flush();
                         } catch (java.io.IOException e2) {
                             logger.log(Level.WARNING, "Failed to flush response writer", e2);
                         }
                     } finally {
-                        asyncContext.complete();
+                        ctx.complete();
                     }
                 }
             }, null);
 
-        asyncContext.addListener(new AsyncServletTestListener(futureTask), request, response);
+        ctx.addListener(new AsyncServletTestListener(futureTask), request, response);
         
         threadPool.execute(futureTask);
     }
